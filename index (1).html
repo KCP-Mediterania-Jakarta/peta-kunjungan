@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peta Potensi Cabang</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--ink:#14233A;--mut:#506078;--line:#D5DDE8;--nav:#0B2F5B;--bg:#F3F6FA;--card:#fff;--warn:#B3261E}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px)}
+header{grid-column:1/-1;background:var(--nav);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;justify-content:space-between}
+header h1{font-size:17px;margin:0}
+.kpi{font-size:13px;display:flex;gap:16px}
+#map{min-height:200px;background:#dfe6ee}
+.side{background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+@media(max-width:860px){.app{grid-template-columns:1fr;grid-template-rows:auto 40dvh minmax(0,1fr)}.side{border-left:0;border-top:1px solid var(--line)}}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;min-height:46px;border:0;background:none;font:inherit;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--nav);border-bottom-color:var(--nav)}
+.pane{padding:14px 16px;overflow-y:auto;flex:1;min-height:0}
+.pane[hidden]{display:none}
+h2{font-size:14px;margin:16px 0 8px;color:var(--mut)}
+h2:first-child{margin-top:0}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+.btn{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
+.btn.p{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.d{color:var(--warn)}
+.btn:focus-visible,.tabs button:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #2F6FD0;outline-offset:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;margin-bottom:10px}
+label.l{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
+.chip{padding:7px 12px;border-radius:18px;border:1px solid var(--line);background:#fff;cursor:pointer;margin:0 6px 6px 0;min-height:36px}
+.chip[aria-pressed="true"]{background:var(--nav);color:#fff;border-color:var(--nav)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:6px}
+.item{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.item input{width:20px;height:20px;flex:none}
+.item .nm{flex:1;cursor:pointer;min-width:0}
+.item .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sm{font-size:12px;color:var(--mut)}
+.badge{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:11px;background:var(--nav);color:#fff;font-size:12px;font-weight:700}
+.card{background:var(--bg);border-radius:8px;padding:10px 12px;margin:8px 0}
+.warn{color:var(--warn)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2000;max-width:90vw}
+#toast.on{opacity:1}
+.hq{background:#0B2F5B;color:#fff;border:3px solid #FCB017;border-radius:6px;width:34px;height:34px;display:grid;place-items:center;font:700 11px system-ui}
+.num{background:var(--nav);color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font:700 12px system-ui}
+</style></head>
+<body>
+<div class="app">
+<header><h1>Peta Potensi Cabang</h1>
+<div class="kpi"><span><b id="k1">0</b> usaha</span><span><b id="k2">0</b> QRIS aktif</span><span><b id="k3">0</b> dalam rute</span></div></header>
+<div id="map" role="application" aria-label="Peta lokasi usaha"></div>
+<div class="side">
+<div class="tabs" role="tablist">
+<button role="tab" data-tab="list" aria-selected="true">Usaha</button>
+<button role="tab" data-tab="detail" aria-selected="false">Detail</button>
+<button role="tab" data-tab="add" aria-selected="false">Tambah</button>
+<button role="tab" data-tab="data" aria-selected="false">Data</button>
+</div>
+
+<div class="pane" id="p-list" role="tabpanel">
+<h2>Filter status</h2><div id="fstat"></div>
+<h2>Jenis usaha</h2><div id="ftype"></div>
+<h2>Rute kunjungan (<span id="rcount">0</span> dipilih)</h2>
+<div class="grid2"><button class="btn p" id="goRoute">Buka rute di Google Maps</button><button class="btn" id="clrRoute">Hapus pilihan</button></div>
+<p class="sm" id="rinfo">Centang usaha di bawah untuk menyusun rute. Urutan dihitung dari posisi Anda (jika GPS aktif) atau dari titik cabang.</p>
+<div id="list"></div>
+</div>
+
+<div class="pane" id="p-detail" role="tabpanel" hidden></div>
+
+<div class="pane" id="p-add" role="tabpanel" hidden>
+<label class="l" for="an">Nama usaha</label><input class="field" id="an" placeholder="Contoh: Warung Bu Ani">
+<label class="l" for="at">Jenis usaha</label><select class="field" id="at"></select>
+<label class="l" for="as">Status</label><select class="field" id="as"></select>
+<label class="l" for="ac">Catatan (opsional, jangan isi data pribadi)</label><textarea class="field" id="ac" rows="2"></textarea>
+<h2>Lokasi</h2>
+<div class="grid2"><button class="btn" id="useGps">Pakai GPS saya</button><button class="btn" id="usePick">Pilih di peta</button></div>
+<div class="card" id="aloc">Lokasi belum dipilih. Berdiri di depan usaha lalu tekan "Pakai GPS saya" agar akurat.</div>
+<div class="card warn" id="adup" hidden></div>
+<button class="btn p" id="asave" style="width:100%">Simpan usaha</button>
+</div>
+
+<div class="pane" id="p-data" role="tabpanel" hidden>
+<h2>Simpan dan bagikan</h2>
+<p class="sm">Data tersimpan di browser perangkat ini. Rutin ekspor sebagai cadangan, dan untuk menggabungkan data antar petugas.</p>
+<div class="grid2"><button class="btn p" id="expCsv">Ekspor CSV</button><button class="btn" id="expJson">Cadangan JSON</button></div>
+<label class="l" for="impf" style="margin-top:12px">Impor cadangan JSON (digabung dengan data yang ada)</label>
+<input class="field" type="file" id="impf" accept=".json,application/json">
+<h2>Titik cabang</h2><p class="sm">Titik awal rute: KCP Jakarta Mediterania Tanjung Duren (koordinat perkiraan di kompleks Podomoro City / Garden Shopping Arcade). Jika kurang pas, geser dengan tombol di bawah.</p><button class="btn" id="mvBr" style="width:100%">Pindahkan titik cabang (ketuk peta)</button>
+<h2>Lainnya</h2>
+<button class="btn" id="sample" style="width:100%;margin-bottom:8px">Muat 5 usaha contoh di sekitar pusat peta</button>
+<button class="btn d" id="wipe" style="width:100%">Hapus semua data</button>
+<div class="card" style="margin-top:16px">Simpan hanya data usaha (nama usaha, jenis, lokasi, status stiker QRIS). Jangan mencatat data pribadi nasabah atau nomor kontak tanpa persetujuan dan sistem resmi bank.</div>
+</div>
+</div>
+</div>
+<div id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+var KEY='peta-potensi-v1';
+var S={belum:['Belum nasabah / belum QRIS','#D1382F'],nasabah:['Nasabah, belum QRIS','#F2B01E'],sepi:['QRIS terpasang, sepi','#3B7BE0'],qris:['QRIS Mandiri aktif','#1B7F4B'],tolak:['Menolak / tutup','#8E98A6']};
+var TY=['Warung makan','Toko kelontong','Apotek','Laundry','Lainnya'];
+var $=function(i){return document.getElementById(i)};
+var db=load(),st={sel:null,on:{belum:1,nasabah:1,sepi:1,qris:1,tolak:1},type:'Semua',pick:[],draft:null,pickMode:false,user:null,dupAck:false};
+function load(){try{var r=localStorage.getItem(KEY);var d=r?JSON.parse(r):null;return d&&d.biz?d:{biz:[]}}catch(e){return {biz:[]}}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('Penyimpanan browser gagal. Segera ekspor data.')}}
+function BR(){return db.branch||{lat:-6.1745,lng:106.7905,name:'KCP Jakarta Mediterania Tanjung Duren'}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(m){var t=$('toast');t.textContent=m;t.className='on';clearTimeout(toast.h);toast.h=setTimeout(function(){t.className=''},2600)}
+function today(){return new Date().toISOString().slice(0,10)}
+function dist(a,b){var R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
+function fmt(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(1).replace('.',',')+' km'}
+function old(b){return (Date.now()-new Date(b.verified).getTime())>180*864e5}
+function vis(b){return st.on[b.s]&&(st.type==='Semua'||b.t===st.type)}
+function byId(id){return db.biz.filter(function(b){return b.id===id})[0]}
+
+/* map */
+var hasL=typeof L!=='undefined',map,layer,rline;
+if(hasL){
+ map=L.map('map',{zoomControl:true}).setView([BR().lat,BR().lng],16);
+ var base={
+  'Jalan (Esri)':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'}),
+  'Satelit (Esri)':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'}),
+  'OpenStreetMap':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'})
+ };
+ (location.protocol==='file:'?base['Jalan (Esri)']:base['OpenStreetMap']).addTo(map);
+ L.control.layers(base,null,{position:'topright'}).addTo(map);
+ layer=L.layerGroup().addTo(map);rline=L.layerGroup().addTo(map);
+ map.on('click',function(e){if(st.branchMode){db.branch={lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6),name:BR().name};st.branchMode=false;save();render();toast('Titik cabang dipindahkan');return}if(st.pickMode){st.draft={lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6)};st.pickMode=false;st.dupAck=false;showTab('add');renderAdd();toast('Lokasi dipilih')}});
+ if(db.biz.length)map.fitBounds(db.biz.map(function(b){return [b.lat,b.lng]}),{padding:[30,30],maxZoom:17});
+ setTimeout(function(){map.invalidateSize()},300);
+ window.addEventListener('resize',function(){map.invalidateSize()});
+}else{$('map').innerHTML='<div style="padding:20px">Peta tidak dapat dimuat. Sambungkan internet lalu muat ulang halaman. Daftar dan data tetap bisa dipakai.</div>'}
+function locate(cb){if(!navigator.geolocation){toast('GPS tidak tersedia di perangkat ini');return}
+ navigator.geolocation.getCurrentPosition(function(p){st.user={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};cb&&cb(st.user)},function(){toast('Izin lokasi ditolak atau GPS mati')},{enableHighAccuracy:true,timeout:15000})}
+
+/* route */
+function routeOrder(){var p=db.biz.filter(function(b){return st.pick.indexOf(b.id)>-1&&vis(b)}),o=[],c=st.user||BR();
+ while(p.length){var k=0,d=1e12;p.forEach(function(b,i){var e=dist(c,b);if(e<d){d=e;k=i}});c=p.splice(k,1)[0];o.push(c)}return o}
+
+/* render */
+function render(){drawMap();renderList();renderDetail();renderKpi()}
+function renderKpi(){$('k1').textContent=db.biz.length;$('k2').textContent=db.biz.filter(function(b){return b.s==='qris'}).length;$('k3').textContent=routeOrder().length;$('rcount').textContent=routeOrder().length}
+function drawMap(){if(!hasL)return;layer.clearLayers();rline.clearLayers();var ro=routeOrder();
+ L.marker([BR().lat,BR().lng],{icon:L.divIcon({className:'',html:'<div class="hq">KCP</div>',iconSize:[34,34],iconAnchor:[17,17]})}).bindTooltip(BR().name).addTo(layer);
+ db.biz.forEach(function(b){if(!vis(b))return;var sel=b.id===st.sel;
+  L.circleMarker([b.lat,b.lng],{radius:sel?13:9,color:sel?'#14233A':'#fff',weight:sel?3:2,fillColor:S[b.s][1],fillOpacity:1}).on('click',function(){select(b.id)}).bindTooltip(b.n).addTo(layer)});
+ if(ro.length){var o=st.user||BR(),pts=[[o.lat,o.lng]].concat(ro.map(function(b){return [b.lat,b.lng]}));
+  L.polyline(pts,{color:'#0B2F5B',weight:3,dashArray:'8 6'}).addTo(rline);
+  ro.forEach(function(b,i){L.marker([b.lat,b.lng],{icon:L.divIcon({className:'',html:'<div class="num">'+(i+1)+'</div>',iconSize:[22,22],iconAnchor:[-6,28]}),interactive:false}).addTo(rline)})}
+ if(st.user)L.circleMarker([st.user.lat,st.user.lng],{radius:7,color:'#fff',weight:3,fillColor:'#2F6FD0',fillOpacity:1}).bindTooltip('Posisi Anda').addTo(rline);
+ if(st.draft)L.circleMarker([st.draft.lat,st.draft.lng],{radius:11,color:'#14233A',weight:3,dashArray:'4 3',fillOpacity:0}).addTo(rline)}
+function renderList(){
+ $('fstat').innerHTML=Object.keys(S).map(function(k){var n=db.biz.filter(function(b){return b.s===k}).length;return '<button class="chip" data-fs="'+k+'" aria-pressed="'+(!!st.on[k])+'"><span class="dot" style="background:'+S[k][1]+'"></span>'+S[k][0]+' ('+n+')</button>'}).join('');
+ $('ftype').innerHTML=['Semua'].concat(TY).map(function(t){return '<button class="chip" data-ft="'+t+'" aria-pressed="'+(st.type===t)+'">'+t+'</button>'}).join('');
+ var ro=routeOrder(),ref=st.user||BR();
+ var rows=db.biz.filter(vis).sort(function(a,b){return ref?dist(ref,a)-dist(ref,b):0});
+ $('list').innerHTML=rows.length?rows.map(function(b){var i=ro.indexOf(b);
+  return '<div class="item"><input type="checkbox" data-pick="'+b.id+'" aria-label="Pilih '+esc(b.n)+' untuk rute"'+(i>-1?' checked':'')+'><div class="nm" data-id="'+b.id+'" tabindex="0" role="button"><b>'+esc(b.n)+'</b><span class="sm"><span class="dot" style="background:'+S[b.s][1]+'"></span>'+S[b.s][0]+(ref?' · '+fmt(dist(ref,b)):'')+(old(b)?' · <span class="warn">perlu verifikasi</span>':'')+'</span></div>'+(i>-1?'<span class="badge">'+(i+1)+'</span>':'')+'</div>'}).join('')
+  :'<div class="card">Belum ada usaha. Buka tab Tambah untuk mencatat usaha pertama, atau tab Data untuk memuat contoh.</div>'}
+function renderDetail(){var p=$('p-detail'),b=byId(st.sel);
+ if(!b){p.innerHTML='<div class="card">Pilih usaha dari daftar atau ketuk pin di peta.</div>';return}
+ p.innerHTML='<div style="font-size:19px;font-weight:700">'+esc(b.n)+'</div><div class="sm">'+esc(b.t)+' · diverifikasi '+esc(b.verified)+(old(b)?' · <span class="warn">perlu verifikasi ulang</span>':'')+'</div>'
+ +'<label class="l" for="ds" style="margin-top:12px">Status</label><select class="field" id="ds">'+Object.keys(S).map(function(k){return '<option value="'+k+'"'+(k===b.s?' selected':'')+'>'+S[k][0]+'</option>'}).join('')+'</select>'
+ +(b.note?'<div class="card">'+esc(b.note)+'</div>':'')
+ +'<h2>Catat hasil kunjungan</h2><input class="field" id="vn" placeholder="Catatan singkat (opsional)"><div class="grid2"><button class="btn" data-v="Tertarik">Tertarik</button><button class="btn" data-v="Follow-up">Follow-up</button><button class="btn p" data-v="Closing">Closing</button><button class="btn" data-v="Menolak">Menolak</button></div>'
+ +'<h2>Riwayat</h2>'+(b.h.length?b.h.slice().reverse().slice(0,8).map(function(x){return '<div class="sm">'+esc(x.d)+' · '+esc(x.r)+(x.c?' · '+esc(x.c):'')+'</div>'}).join(''):'<div class="sm">Belum ada kunjungan.</div>')
+ +'<div class="grid2" style="margin-top:16px"><button class="btn" id="dgo">Navigasi ke sini</button><button class="btn d" id="ddel">Hapus usaha</button></div>'}
+function renderAdd(){var d=st.draft;$('aloc').innerHTML=d?'Lokasi: '+d.lat+', '+d.lng+(d.acc?' (akurasi ±'+Math.round(d.acc)+' m)':''):'Lokasi belum dipilih. Berdiri di depan usaha lalu tekan "Pakai GPS saya" agar akurat.';
+ var dup=d&&db.biz.filter(function(b){return dist(b,d)<20})[0];
+ $('adup').hidden=!dup;if(dup)$('adup').innerHTML='Ada usaha di dekat titik ini: <b>'+esc(dup.n)+'</b>. Pastikan bukan duplikat, atau tekan simpan sekali lagi.'}
+
+/* actions */
+function select(id){st.sel=id;showTab('detail');render();var b=byId(id);if(hasL&&b)map.panTo([b.lat,b.lng])}
+function showTab(t){document.querySelectorAll('.tabs button').forEach(function(x){x.setAttribute('aria-selected',x.dataset.tab===t)});['list','detail','add','data'].forEach(function(k){$('p-'+k).hidden=k!==t});if(t==='add')renderAdd()}
+function visit(v){var b=byId(st.sel),c=$('vn').value.trim();b.h.push({d:today(),r:v,c:c});b.verified=today();
+ if(v==='Closing'&&b.s!=='qris')b.s='qris';if(v==='Menolak')b.s='tolak';
+ st.pick=st.pick.filter(function(i){return i!==b.id});save();toast('Tersimpan: '+v);render()}
+function saveNew(){var n=$('an').value.trim(),d=st.draft;
+ if(!n){toast('Isi nama usaha');return}if(!d){toast('Pilih lokasi dulu');return}
+ var dup=db.biz.filter(function(b){return dist(b,d)<20})[0];if(dup&&!st.dupAck){st.dupAck=true;renderAdd();return}
+ var b={id:'b'+Date.now().toString(36),n:n,t:$('at').value,s:$('as').value,lat:d.lat,lng:d.lng,note:$('ac').value.trim(),created:today(),verified:today(),h:[]};
+ db.biz.push(b);save();st.draft=null;st.dupAck=false;$('an').value='';$('ac').value='';st.sel=b.id;toast('Usaha disimpan');showTab('detail');render()}
+function gmaps(){var ro=routeOrder();if(!ro.length){toast('Centang usaha dulu');return}
+ var s=ro.slice(0,10),dst=s[s.length-1],way=s.slice(0,-1).map(function(b){return b.lat+','+b.lng}).join('|');
+ var u='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+dst.lat+','+dst.lng+(way?'&waypoints='+encodeURIComponent(way):'')+'&origin='+(st.user||BR()).lat+','+(st.user||BR()).lng;
+ if(ro.length>10)toast('Google Maps membatasi 10 titik. 10 pertama dibuka.');window.open(u,'_blank','noopener')}
+function download(name,text,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function csv(){var q=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'};
+ return '\ufeff'+['id','nama','jenis','status','lat','lng','catatan','dibuat','terakhir_diverifikasi','jumlah_kunjungan'].join(',')+'\n'+db.biz.map(function(b){return [b.id,b.n,b.t,S[b.s][0],b.lat,b.lng,b.note,b.created,b.verified,b.h.length].map(q).join(',')}).join('\n')}
+
+/* events */
+document.addEventListener('click',function(e){var t=e.target,m;
+ if((m=t.closest('[data-tab]'))){showTab(m.dataset.tab);return}
+ if((m=t.closest('[data-fs]'))){st.on[m.dataset.fs]=st.on[m.dataset.fs]?0:1;render();return}
+ if((m=t.closest('[data-ft]'))){st.type=m.dataset.ft;render();return}
+ if((m=t.closest('[data-v]'))){visit(m.dataset.v);return}
+ if(t.closest('[data-pick]'))return;
+ if((m=t.closest('.nm[data-id]'))){select(m.dataset.id)}});
+document.addEventListener('keydown',function(e){var m=e.target.closest&&e.target.closest('.nm[data-id]');if(m&&(e.key==='Enter'||e.key===' ')){e.preventDefault();select(m.dataset.id)}});
+document.addEventListener('change',function(e){var k=e.target.dataset&&e.target.dataset.pick;
+ if(k){var i=st.pick.indexOf(k);if(e.target.checked&&i<0)st.pick.push(k);if(!e.target.checked&&i>-1)st.pick.splice(i,1);render();return}
+ if(e.target.id==='ds'){var b=byId(st.sel);b.s=e.target.value;b.verified=today();save();toast('Status diperbarui');render()}});
+$('goRoute').onclick=gmaps;
+$('clrRoute').onclick=function(){st.pick=[];render()};
+$('useGps').onclick=function(){toast('Mencari lokasi...');locate(function(u){st.draft={lat:+u.lat.toFixed(6),lng:+u.lng.toFixed(6),acc:u.acc};st.dupAck=false;renderAdd();if(hasL)map.setView([u.lat,u.lng],18);render()})};
+$('usePick').onclick=function(){st.pickMode=true;toast('Ketuk lokasi usaha di peta');$('map').scrollIntoView({block:'nearest'})};
+$('asave').onclick=saveNew;
+$('mvBr').onclick=function(){st.branchMode=true;toast('Ketuk lokasi cabang di peta')};
+$('p-detail').addEventListener('click',function(e){var b=byId(st.sel);if(!b)return;
+ if(e.target.id==='ddel'&&confirm('Hapus '+b.n+'?')){db.biz=db.biz.filter(function(x){return x!==b});st.sel=null;st.pick=st.pick.filter(function(i){return i!==b.id});save();showTab('list');render()}
+ if(e.target.id==='dgo')window.open('https://www.google.com/maps/dir/?api=1&destination='+b.lat+','+b.lng,'_blank','noopener')});
+$('expCsv').onclick=function(){download('usaha-'+today()+'.csv',csv(),'text/csv;charset=utf-8')};
+$('expJson').onclick=function(){download('cadangan-peta-'+today()+'.json',JSON.stringify(db),'application/json')};
+$('impf').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);if(!d.biz||!Array.isArray(d.biz))throw 0;var n=0;
+ d.biz.forEach(function(b){if(b&&b.id&&b.n&&typeof b.lat==='number'&&typeof b.lng==='number'&&S[b.s]&&!byId(b.id)){b.h=Array.isArray(b.h)?b.h:[];db.biz.push(b);n++}});save();render();toast(n+' usaha diimpor')}catch(x){toast('File tidak valid')}};r.readAsText(f);e.target.value=''};
+$('sample').onclick=function(){if(!hasL){toast('Peta belum termuat');return}var c=BR(),nm=[['Warung Contoh 1','Warung makan','belum'],['Toko Contoh 2','Toko kelontong','nasabah'],['Apotek Contoh 3','Apotek','qris'],['Laundry Contoh 4','Laundry','sepi'],['Toko Contoh 5','Toko kelontong','belum']];
+ nm.forEach(function(x,i){db.biz.push({id:'s'+Date.now().toString(36)+i,n:x[0],t:x[1],s:x[2],lat:c.lat+(Math.random()-.5)*.006,lng:c.lng+(Math.random()-.5)*.006,note:'Data contoh',created:today(),verified:today(),h:[]})});save();render();showTab('list');toast('Data contoh dimuat')};
+$('wipe').onclick=function(){if(confirm('Hapus SEMUA data di perangkat ini? Pastikan sudah ekspor cadangan.')){db={biz:[]};st.sel=null;st.pick=[];save();render()}};
+$('at').innerHTML=TY.map(function(t){return '<option>'+t+'</option>'}).join('');
+$('as').innerHTML=Object.keys(S).map(function(k){return '<option value="'+k+'">'+S[k][0]+'</option>'}).join('');
+render();
+</script></body></html>
