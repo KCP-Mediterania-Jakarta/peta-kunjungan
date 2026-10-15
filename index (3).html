@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peta Potensi Cabang</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--ink:#14233A;--mut:#506078;--line:#D5DDE8;--nav:#0B2F5B;--bg:#F3F6FA;--card:#fff;--warn:#B3261E;--ok:#1B7F4B}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 420px;grid-template-rows:auto minmax(0,1fr);height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px)}
+header{grid-column:1/-1;background:var(--nav);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;justify-content:space-between}
+header h1{font-size:17px;margin:0}
+.kpi{font-size:13px;display:flex;gap:16px;flex-wrap:wrap}
+#map{min-height:200px;background:#dfe6ee}
+.side{background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+@media(max-width:860px){.app{grid-template-columns:1fr;grid-template-rows:auto 38dvh minmax(0,1fr)}.side{border-left:0;border-top:1px solid var(--line)}}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+.tabs button{flex:1 0 auto;min-height:46px;padding:0 12px;border:0;background:none;font:inherit;font-size:14px;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--nav);border-bottom-color:var(--nav)}
+.pane{padding:14px 16px;overflow-y:auto;flex:1;min-height:0}
+.pane[hidden]{display:none}
+h2{font-size:14px;margin:16px 0 8px;color:var(--mut)}
+h2:first-child{margin-top:0}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+.btn{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
+.btn.p{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.g{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.d{color:var(--warn)}
+.btn.s{min-height:34px;font-size:12px;padding:0 10px}
+.icon{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:grid;place-items:center;flex:none}
+.icon[aria-expanded="true"]{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn:focus-visible,.icon:focus-visible,.tabs button:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.nm:focus-visible{outline:3px solid #2F6FD0;outline-offset:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.field{width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;margin-bottom:10px}
+label.l{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
+.chip{padding:7px 12px;border-radius:18px;border:1px solid var(--line);background:#fff;cursor:pointer;margin:0 6px 6px 0;min-height:36px}
+.chip[aria-pressed="true"]{background:var(--nav);color:#fff;border-color:var(--nav)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:6px}
+.item{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.item input{width:20px;height:20px;flex:none}
+.item .nm{flex:1;cursor:pointer;min-width:0}
+.item .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sm{font-size:12px;color:var(--mut)}
+.badge{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:11px;background:var(--nav);color:#fff;font-size:12px;font-weight:700}
+.card{background:var(--bg);border-radius:8px;padding:10px 12px;margin:8px 0}
+.warn{color:var(--warn)}
+.tag{display:inline-block;padding:3px 10px;border-radius:14px;font-size:12px;font-weight:700;color:#fff}
+.bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%}
+.big{font-size:26px;font-weight:700;line-height:1.1}
+.hrow{padding:10px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
+.hrow .x{flex:1;min-width:0}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2000;max-width:90vw}
+#toast.on{opacity:1}
+.hq{background:#0B2F5B;color:#fff;border:3px solid #FCB017;border-radius:6px;width:34px;height:34px;display:grid;place-items:center;font:700 11px system-ui}
+.num{background:var(--nav);color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font:700 12px system-ui}
+</style></head>
+<body>
+<div class="app">
+<header><h1>Peta Potensi Cabang</h1>
+<div class="kpi"><span><b id="k1">0</b> usaha</span><span><b id="k2">0</b> berhasil hari ini</span><span><b id="k3">0</b> dalam rute</span></div></header>
+<div id="map" role="application" aria-label="Peta lokasi usaha"></div>
+<div class="side">
+<div class="tabs" role="tablist">
+<button role="tab" data-tab="list" aria-selected="true">Usaha</button>
+<button role="tab" data-tab="detail" aria-selected="false">Detail</button>
+<button role="tab" data-tab="add" aria-selected="false">Tambah</button>
+<button role="tab" data-tab="hist" aria-selected="false">Riwayat</button>
+<button role="tab" data-tab="dash" aria-selected="false">Dashboard</button>
+<button role="tab" data-tab="data" aria-selected="false">Data</button>
+</div>
+
+<div class="pane" id="p-list" role="tabpanel">
+<h2>Filter status</h2><div id="fstat"></div>
+<h2>Jenis usaha</h2><div id="ftype"></div>
+<h2>Rute kunjungan (<span id="rcount">0</span> dipilih)</h2>
+<div class="grid2"><button class="btn p" id="goRoute">Buka rute di Google Maps</button><button class="btn" id="clrRoute">Hapus pilihan</button></div>
+<p class="sm" id="rinfo"></p>
+<div id="list"></div>
+</div>
+
+<div class="pane" id="p-detail" role="tabpanel" hidden></div>
+
+<div class="pane" id="p-add" role="tabpanel" hidden>
+<label class="l" for="an">Nama usaha</label><input class="field" id="an" placeholder="Contoh: Warung Bu Ani">
+<label class="l" for="aj">Jenis usaha (ketik bebas)</label><input class="field" id="aj" list="dlj" placeholder="Contoh: Warung makan" autocomplete="off">
+<label class="l" for="ar">Hasil kunjungan</label><select class="field" id="ar"><option value="" disabled selected>Pilih hasil kunjungan</option><option>Sudah</option><option>Berhasil</option><option>Menolak</option></select>
+<label class="l" for="ac">Catatan (jangan isi data pribadi)</label><textarea class="field" id="ac" rows="2"></textarea>
+<h2>Lokasi</h2>
+<div class="grid2"><button class="btn" id="useGps">Pakai GPS saya</button><button class="btn" id="usePick">Pilih di peta</button></div>
+<div class="card" id="aloc"></div>
+<div class="card warn" id="adup" hidden></div>
+<button class="btn p" id="asave" style="width:100%">Simpan usaha</button>
+</div>
+
+<div class="pane" id="p-hist" role="tabpanel" hidden>
+<div class="grid2"><div><label class="l" for="hf">Dari tanggal</label><input class="field" type="date" id="hf"></div><div><label class="l" for="ht">Sampai tanggal</label><input class="field" type="date" id="ht"></div></div>
+<label class="l" for="hr">Hasil kunjungan</label><select class="field" id="hr"><option>Semua</option><option>Sudah</option><option>Berhasil</option><option>Menolak</option></select>
+<button class="btn p" id="hcsv" style="width:100%">Ekspor CSV (sesuai rentang dan filter)</button>
+<p class="sm" id="hsum" style="margin-top:10px"></p>
+<div id="hlist"></div>
+</div>
+
+<div class="pane" id="p-dash" role="tabpanel" hidden>
+<label class="l" for="dp">Petugas</label><select class="field" id="dp"></select>
+<div id="dbody"></div>
+<h2>Pengaturan target</h2>
+<div class="grid2"><div><label class="l" for="dt">Target harian (Berhasil)</label><input class="field" type="number" min="1" max="100" id="dt"></div><div><label class="l" for="dh">Libur/cuti bulan ini (hari)</label><input class="field" type="number" min="0" max="31" id="dh"></div></div>
+<p class="sm">Target bulanan = hari kerja (Senin-Jumat, dikurangi libur yang kamu isi) × target harian. Libur nasional tidak terdeteksi otomatis.</p>
+</div>
+
+<div class="pane" id="p-data" role="tabpanel" hidden>
+<h2>Nama petugas</h2>
+<input class="field" id="off" placeholder="Opsional, dicatat di setiap kunjungan" autocomplete="off">
+<h2>Titik cabang</h2>
+<p class="sm" id="brc"></p>
+<div class="grid2"><button class="btn" id="mvBr">Pindahkan (ketuk peta)</button><button class="btn" id="cpBr">Salin koordinat</button></div>
+<h2>Simpan dan bagikan</h2>
+<p class="sm">Data tersimpan di browser perangkat ini. Rutin ekspor sebagai cadangan, dan untuk menggabungkan data antar petugas.</p>
+<div class="grid2"><button class="btn p" id="expCsv">Ekspor CSV usaha</button><button class="btn" id="expJson">Cadangan JSON</button></div>
+<label class="l" for="impf" style="margin-top:12px">Impor cadangan JSON (digabung dengan data yang ada)</label>
+<input class="field" type="file" id="impf" accept=".json,application/json">
+<h2>Lainnya</h2>
+<button class="btn" id="sample" style="width:100%;margin-bottom:8px">Muat data contoh (usaha dan kunjungan)</button>
+<button class="btn d" id="wipe" style="width:100%">Hapus semua data</button>
+<div class="card" style="margin-top:16px">Simpan hanya data usaha (nama usaha, jenis, lokasi, hasil kunjungan). Jangan mencatat data pribadi nasabah atau nomor kontak tanpa persetujuan dan sistem resmi bank.</div>
+</div>
+</div>
+</div>
+<datalist id="dlj"></datalist>
+<div id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+var KEY='peta-potensi-v1';
+var STAT={belum:['Belum LVM','#D1382F'],sudah:['Sudah LVM','#1B7F4B']};
+var RES=['Sudah','Berhasil','Menolak'];
+var DEFJ=['Warung makan','Toko kelontong','Apotek','Laundry'];
+var DEF_BRANCH={lat:-6.1760,lng:106.7890,name:'KCP Jakarta Mediterania Tanjung Duren'};
+var $=function(i){return document.getElementById(i)};
+function pad(n){return (n<10?'0':'')+n}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function today(){return ymd(new Date())}
+function pdate(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function daysSince(s){var n=new Date();return Math.floor((new Date(n.getFullYear(),n.getMonth(),n.getDate())-pdate(s))/864e5)}
+var st={sel:null,on:{belum:1,sudah:1},jenis:'Semua',pick:[],draft:null,pickMode:false,branchMode:false,editLoc:null,editing:false,user:null,dupAck:false,rt:null,rtKey:'',rtTok:0,hFrom:ymd(new Date(new Date().getFullYear(),new Date().getMonth(),1)),hTo:today(),hRes:'Semua',dPet:'Semua'};
+
+/* ---------- data ---------- */
+function norm(d){if(!d||!Array.isArray(d.biz))d={biz:[]};
+ d.visits=Array.isArray(d.visits)?d.visits:[];d.settings=d.settings||{};
+ d.biz.forEach(function(b){
+  if(Array.isArray(b.h)){b.h.forEach(function(x,i){d.visits.push({id:'m'+b.id+i,bid:b.id,n:b.n,t:b.t||'',d:x.d,r:x.r==='Closing'?'Berhasil':x.r,c:x.c||'',p:''})});delete b.h}
+  if(b.s){b.s0=({ns:1,nns:1,qris:1,sepi:1})[b.s]?'sudah':'belum';delete b.s}
+  b.t=b.t||'';b.s0=b.s0==='sudah'?'sudah':'belum'});
+ d.visits=d.visits.filter(function(v){return v&&v.id&&v.bid&&v.d&&RES.indexOf(v.r)>-1});
+ return d}
+function load(){try{var r=localStorage.getItem(KEY);return norm(r?JSON.parse(r):null)}catch(e){return norm(null)}}
+var db=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('Penyimpanan browser gagal. Segera ekspor data.')}}
+function BR(){return db.branch||DEF_BRANCH}
+function origin(){return st.user||BR()}
+function officer(){return (db.settings.officer||'').trim()}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(m){var t=$('toast');t.textContent=m;t.className='on';clearTimeout(toast.h);toast.h=setTimeout(function(){t.className=''},2800)}
+function dist(a,b){var R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
+function fmt(m){return m<1000?Math.round(m)+' m':(m/1000).toFixed(1).replace('.',',')+' km'}
+function old(b){return daysSince(b.verified||today())>180}
+function byId(id){return db.biz.filter(function(b){return b.id===id})[0]}
+var ST={},LAST={};
+function vkey(v){return v.ts||v.d}
+function buildStat(){ST={};LAST={};db.visits.slice().sort(function(a,b){return vkey(a)<vkey(b)?-1:1}).forEach(function(v){ST[v.bid]=v.r==='Menolak'?'belum':'sudah';LAST[v.bid]=v.d})}
+function stat(b){return ST[b.id]||b.s0||'belum'}
+function jk(b){return (b.t||'').trim().toLowerCase()}
+function jenisList(){var m={},o=[];db.biz.forEach(function(b){var t=(b.t||'').trim(),k=t.toLowerCase();if(t&&!m[k]){m[k]=t;o.push(t)}});return o.sort()}
+function vis(b){return st.on[stat(b)]&&(st.jenis==='Semua'||jk(b)===st.jenis)}
+function addVisit(b,r,c,t){var now=new Date();
+ db.visits.push({id:'v'+now.getTime().toString(36)+Math.random().toString(36).slice(2,5),bid:b.id,n:b.n,t:(t||b.t||'').trim(),d:ymd(now),ts:now.toISOString(),r:r,c:c||'',p:officer()});
+ b.verified=ymd(now);if(t&&t.trim())b.t=t.trim()}
+
+/* ---------- peta ---------- */
+var hasL=typeof L!=='undefined',map,layer,rline;
+if(hasL){
+ map=L.map('map',{zoomControl:true}).setView([BR().lat,BR().lng],17);
+ var base={
+  'Jalan (Esri)':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'}),
+  'Satelit (Esri)':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'}),
+  'OpenStreetMap':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'})
+ };
+ (location.protocol==='file:'?base['Jalan (Esri)']:base['OpenStreetMap']).addTo(map);
+ L.control.layers(base,null,{position:'topright'}).addTo(map);
+ layer=L.layerGroup().addTo(map);rline=L.layerGroup().addTo(map);
+ map.on('click',function(e){var p={lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6)};
+  if(st.branchMode){db.branch={lat:p.lat,lng:p.lng,name:BR().name};st.branchMode=false;save();render();toast('Titik cabang dipindahkan');return}
+  if(st.editLoc){var b=byId(st.editLoc);st.editLoc=null;if(b){b.lat=p.lat;b.lng=p.lng;b.verified=today();save();render();toast('Titik '+b.n+' dipindahkan')}return}
+  if(st.pickMode){st.draft=p;st.pickMode=false;st.dupAck=false;showTab('add');renderAdd();render();toast('Lokasi dipilih')}});
+ if(db.biz.length)map.fitBounds(db.biz.map(function(b){return [b.lat,b.lng]}).concat([[BR().lat,BR().lng]]),{padding:[30,30],maxZoom:17});
+ setTimeout(function(){map.invalidateSize()},300);
+ window.addEventListener('resize',function(){map.invalidateSize()});
+}else{$('map').innerHTML='<div style="padding:20px">Peta tidak dapat dimuat. Sambungkan internet lalu muat ulang halaman. Daftar dan data tetap bisa dipakai.</div>'}
+function locate(cb){if(!navigator.geolocation){toast('GPS tidak tersedia di perangkat ini');return}
+ navigator.geolocation.getCurrentPosition(function(p){st.user={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};cb&&cb(st.user)},function(){toast('Izin lokasi ditolak atau GPS mati')},{enableHighAccuracy:true,timeout:15000})}
+
+/* ---------- rute berdasarkan jarak tempuh (jalan) ---------- */
+var MAXSTOP=25;
+function pickedIds(){return st.pick.filter(function(id){var b=byId(id);return b&&vis(b)}).slice(0,MAXSTOP)}
+function rtKey(ids){var o=origin();return o.lat.toFixed(5)+','+o.lng.toFixed(5)+'|'+ids.slice().sort().join(',')}
+function straightOrder(ids){var p=ids.map(byId),o=[],c=origin();while(p.length){var k=0,d=1e12;p.forEach(function(b,i){var e=dist(c,b);if(e<d){d=e;k=i}});c=p.splice(k,1)[0];o.push(c)}return o}
+function routeOrder(){var ids=pickedIds();if(!ids.length)return [];
+ if(st.rt&&st.rt.key===rtKey(ids)&&st.rt.order)return st.rt.order.map(byId).filter(Boolean);return straightOrder(ids)}
+function osrm(path){return fetch('https://router.project-osrm.org'+path).then(function(r){if(!r.ok)throw new Error('http');return r.json()})}
+function solve(D,n){var path=[],left=[],i,c=0;for(i=1;i<n;i++)left.push(i);
+ while(left.length){var k=0;for(i=1;i<left.length;i++)if(D[c][left[i]]<D[c][left[k]])k=i;c=left.splice(k,1)[0];path.push(c)}
+ function cost(p){var t=D[0][p[0]];for(var i=0;i<p.length-1;i++)t+=D[p[i]][p[i+1]];return t}
+ var best=cost(path),imp=true,g=0;
+ while(imp&&g++<40){imp=false;for(var a=0;a<path.length-1;a++)for(var b=a+1;b<path.length;b++){var q=path.slice(0,a).concat(path.slice(a,b+1).reverse(),path.slice(b+1)),cq=cost(q);if(cq<best-1){path=q;best=cq;imp=true}}}
+ return path}
+function ensureRoute(){var ids=pickedIds(),key=rtKey(ids);
+ if(!ids.length){st.rt=null;st.rtKey=key;st.rtTok++;return}
+ if(key===st.rtKey)return;
+ st.rtKey=key;st.rt=null;var tok=++st.rtTok,o=origin(),stops=ids.map(byId),pts=[o].concat(stops);
+ var cs=function(a){return a.map(function(p){return p.lng.toFixed(6)+','+p.lat.toFixed(6)}).join(';')};
+ osrm('/table/v1/driving/'+cs(pts)+'?annotations=distance').then(function(t){
+  if(tok!==st.rtTok)return;var n=pts.length,D=t.distances;
+  if(!D)throw new Error('nodata');
+  for(var i=0;i<n;i++)for(var j=0;j<n;j++)if(D[i][j]==null)D[i][j]=dist(pts[i],pts[j])*1.6;
+  var order=solve(D,n),seq=[o].concat(order.map(function(i){return pts[i]}));
+  return osrm('/route/v1/driving/'+cs(seq)+'?overview=full&geometries=geojson').then(function(r){
+   if(tok!==st.rtTok)return;var rt=r.routes&&r.routes[0];if(!rt)throw new Error('noroute');
+   st.rt={key:key,order:order.map(function(i){return pts[i].id}),geo:rt.geometry.coordinates.map(function(c){return [c[1],c[0]]}),dist:rt.distance,dur:rt.duration};
+   drawMap();renderList();renderKpi()})
+ }).catch(function(){if(tok!==st.rtTok)return;st.rt={key:key,fail:true};renderKpi();toast('Gagal mengambil data jalan. Rute memakai jarak lurus.')})}
+
+/* ---------- render ---------- */
+function render(){buildStat();ensureRoute();drawMap();renderList();renderDetail();renderHist();renderDash();renderKpi()}
+function countRes(f,r,V){return (V||db.visits).filter(function(v){return f(v)&&(!r||v.r===r)}).length}
+function renderKpi(){var n=pickedIds().length,td=today();
+ $('k1').textContent=db.biz.length;$('k2').textContent=countRes(function(v){return v.d===td},'Berhasil')+'/'+(+db.settings.target||5);$('k3').textContent=n;$('rcount').textContent=n;
+ var m;if(!n)m='Centang usaha di bawah untuk menyusun rute. Urutan dihitung berdasarkan jarak tempuh lewat jalan, dari posisi GPS Anda (jika aktif) atau dari titik cabang.';
+ else if(!st.rt)m='Menghitung rute lewat jalan...';
+ else if(st.rt.fail)m='<span class="warn">Data jalan tidak tersedia (butuh internet). Urutan memakai jarak lurus.</span>';
+ else m='Jarak tempuh <b>'+fmt(st.rt.dist)+'</b>, perkiraan <b>'+Math.max(1,Math.round(st.rt.dur/60))+' menit</b> (tanpa kemacetan). Urutan sudah mengikuti jalan.';
+ $('rinfo').innerHTML=m;
+ $('brc').innerHTML=esc(BR().name)+'<br>Koordinat: '+BR().lat+', '+BR().lng+(db.branch?' (sudah digeser)':' (titik awal bawaan)')}
+function drawMap(){if(!hasL)return;layer.clearLayers();rline.clearLayers();var ro=routeOrder(),o=origin();
+ L.marker([BR().lat,BR().lng],{icon:L.divIcon({className:'',html:'<div class="hq">KCP</div>',iconSize:[34,34],iconAnchor:[17,17]}),zIndexOffset:500}).bindTooltip(BR().name).addTo(layer);
+ db.biz.forEach(function(b){if(!vis(b))return;var sel=b.id===st.sel;
+  L.circleMarker([b.lat,b.lng],{radius:sel?13:9,color:sel?'#14233A':'#fff',weight:sel?3:2,fillColor:STAT[stat(b)][1],fillOpacity:1}).on('click',function(){select(b.id)}).bindTooltip(b.n+(b.t?' · '+b.t:'')+' · '+STAT[stat(b)][0]).addTo(layer)});
+ if(ro.length){
+  if(st.rt&&st.rt.key===rtKey(pickedIds())&&st.rt.geo)L.polyline(st.rt.geo,{color:'#0B2F5B',weight:5,opacity:.8}).addTo(rline);
+  else L.polyline([[o.lat,o.lng]].concat(ro.map(function(b){return [b.lat,b.lng]})),{color:'#0B2F5B',weight:3,dashArray:'8 6'}).addTo(rline);
+  ro.forEach(function(b,i){L.marker([b.lat,b.lng],{icon:L.divIcon({className:'',html:'<div class="num">'+(i+1)+'</div>',iconSize:[22,22],iconAnchor:[-6,28]}),interactive:false}).addTo(rline)})}
+ if(st.user)L.circleMarker([st.user.lat,st.user.lng],{radius:7,color:'#fff',weight:3,fillColor:'#2F6FD0',fillOpacity:1}).bindTooltip('Posisi Anda').addTo(rline);
+ if(st.draft)L.circleMarker([st.draft.lat,st.draft.lng],{radius:11,color:'#14233A',weight:3,dashArray:'4 3',fillOpacity:0}).addTo(rline)}
+function renderList(){
+ $('fstat').innerHTML=Object.keys(STAT).map(function(k){var n=db.biz.filter(function(b){return stat(b)===k}).length;return '<button class="chip" data-fs="'+k+'" aria-pressed="'+(!!st.on[k])+'"><span class="dot" style="background:'+STAT[k][1]+'"></span>'+STAT[k][0]+' ('+n+')</button>'}).join('');
+ var js=jenisList();if(st.jenis!=='Semua'&&!js.some(function(t){return t.toLowerCase()===st.jenis}))st.jenis='Semua';
+ $('ftype').innerHTML=['Semua'].concat(js).map(function(t){var k=t==='Semua'?'Semua':t.toLowerCase();return '<button class="chip" data-fj="'+esc(k)+'" aria-pressed="'+(st.jenis===k)+'">'+esc(t)+'</button>'}).join('');
+ var all=DEFJ.slice();js.forEach(function(t){if(all.map(function(x){return x.toLowerCase()}).indexOf(t.toLowerCase())<0)all.push(t)});
+ $('dlj').innerHTML=all.map(function(t){return '<option value="'+esc(t)+'">'}).join('');
+ var ro=routeOrder(),ref=origin(),rows=db.biz.filter(vis).sort(function(a,b){return dist(ref,a)-dist(ref,b)});
+ $('list').innerHTML=rows.length?rows.map(function(b){var i=ro.indexOf(b),s=stat(b);
+  return '<div class="item"><input type="checkbox" data-pick="'+b.id+'" aria-label="Pilih '+esc(b.n)+' untuk rute"'+(i>-1?' checked':'')+'><div class="nm" data-id="'+b.id+'" tabindex="0" role="button"><b>'+esc(b.n)+'</b><span class="sm"><span class="dot" style="background:'+STAT[s][1]+'"></span>'+STAT[s][0]+(b.t?' · '+esc(b.t):'')+' · '+fmt(dist(ref,b))+' lurus'+(old(b)?' · <span class="warn">perlu verifikasi</span>':'')+'</span></div>'+(i>-1?'<span class="badge">'+(i+1)+'</span>':'')+'</div>'}).join('')
+  :'<div class="card">Belum ada usaha yang cocok. Buka tab Tambah untuk mencatat usaha, atau tab Data untuk memuat contoh.</div>'}
+var PENCIL='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+function tagHtml(s){return '<span class="tag" style="background:'+STAT[s][1]+'">'+STAT[s][0]+'</span>'}
+function resTag(r){return '<span class="tag" style="background:'+(r==='Menolak'?'#D1382F':'#1B7F4B')+'">'+r+'</span>'}
+function jam(v){if(!v.ts)return '';var d=new Date(v.ts);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function renderDetail(){var p=$('p-detail'),b=byId(st.sel);
+ if(!b){p.innerHTML='<div class="card">Pilih usaha dari daftar atau ketuk pin di peta.</div>';return}
+ var s=stat(b),hs=db.visits.filter(function(v){return v.bid===b.id}).sort(function(a,c){return vkey(a)<vkey(c)?1:-1}).slice(0,6);
+ p.innerHTML='<div style="display:flex;gap:8px;align-items:center"><div style="font-size:19px;font-weight:700;flex:1;min-width:0;overflow-wrap:anywhere">'+esc(b.n)+'</div><button class="icon" id="editToggle" aria-label="Edit nama dan titik usaha" aria-expanded="'+st.editing+'" title="Edit usaha">'+PENCIL+'</button></div>'
+ +'<div class="sm" style="margin:2px 0 8px">'+(b.t?esc(b.t)+' · ':'')+'diverifikasi '+esc(b.verified||'-')+(old(b)?' · <span class="warn">perlu verifikasi ulang</span>':'')+'</div>'+tagHtml(s)
+ +'<div class="grid2" style="margin:12px 0"><button class="btn" id="dgo">Navigasi ke sini</button><button class="btn d" id="ddel">Hapus usaha</button></div>'
+ +(st.editing?'<div class="card"><label class="l" for="en">Nama usaha</label><input class="field" id="en" value="'+esc(b.n)+'"><button class="btn p" id="enSave" style="width:100%">Simpan nama</button><h2>Titik lokasi</h2><div class="sm">Titik sekarang: '+b.lat+', '+b.lng+'</div><div class="grid2" style="margin-top:8px"><button class="btn" id="elGps">Pakai GPS saya</button><button class="btn" id="elMap">Ketuk di peta</button></div></div>':'')
+ +(b.note?'<div class="card">'+esc(b.note)+'</div>':'')
+ +'<h2>Catat hasil kunjungan</h2><label class="l" for="vj">Jenis usaha (ketik bebas)</label><input class="field" id="vj" list="dlj" value="'+esc(b.t)+'" autocomplete="off"><label class="l" for="vn">Catatan</label><input class="field" id="vn" placeholder="Catatan singkat (opsional)">'
+ +'<div class="grid3"><button class="btn g" data-res="Sudah">Sudah</button><button class="btn p" data-res="Berhasil">Berhasil</button><button class="btn d" data-res="Menolak">Menolak</button></div>'
+ +'<div class="sm" style="margin-top:6px"><b>Sudah</b> dan <b>Berhasil</b> membuat status menjadi Sudah LVM. <b>Menolak</b> menjadi Belum LVM. Berhasil dihitung ke target harian.</div>'
+ +'<h2>Riwayat usaha ini</h2>'+(hs.length?hs.map(function(v){return '<div class="sm" style="padding:3px 0">'+esc(v.d)+' '+jam(v)+' · <b>'+esc(v.r)+'</b>'+(v.c?' · '+esc(v.c):'')+'</div>'}).join(''):'<div class="sm">Belum ada kunjungan.</div>')}
+function renderAdd(){var d=st.draft;$('aloc').innerHTML=d?'Lokasi: '+d.lat+', '+d.lng+(d.acc?' (akurasi ±'+Math.round(d.acc)+' m)':''):'Lokasi belum dipilih. Berdiri di depan usaha lalu tekan "Pakai GPS saya" agar akurat.';
+ var dup=d&&db.biz.filter(function(b){return dist(b,d)<20})[0];
+ $('adup').hidden=!dup;if(dup)$('adup').innerHTML='Ada usaha di dekat titik ini: <b>'+esc(dup.n)+'</b>. Pastikan bukan duplikat, atau tekan simpan sekali lagi.'}
+
+/* ---------- riwayat ---------- */
+function histRows(){return db.visits.filter(function(v){return (!st.hFrom||v.d>=st.hFrom)&&(!st.hTo||v.d<=st.hTo)&&(st.hRes==='Semua'||v.r===st.hRes)}).sort(function(a,b){return vkey(a)<vkey(b)?1:-1})}
+function renderHist(){var rows=histRows(),c={Sudah:0,Berhasil:0,Menolak:0};rows.forEach(function(v){c[v.r]++});
+ $('hsum').innerHTML='<b>'+rows.length+'</b> kunjungan: '+c.Berhasil+' Berhasil, '+c.Sudah+' Sudah, '+c.Menolak+' Menolak.'+(rows.length>150?' Menampilkan 150 terbaru. Ekspor CSV berisi semuanya.':'');
+ $('hlist').innerHTML=rows.length?rows.slice(0,150).map(function(v){var b=byId(v.bid);
+  return '<div class="hrow"><div class="x"><div class="sm">'+esc(v.d)+' '+jam(v)+(v.p?' · '+esc(v.p):'')+'</div><div>'+(b?'<a href="#" data-hid="'+esc(v.bid)+'" style="color:var(--nav);font-weight:700">'+esc(v.n)+'</a>':'<b>'+esc(v.n)+'</b>')+(v.t?' · '+esc(v.t):'')+' '+resTag(v.r)+'</div>'+(v.c?'<div class="sm">'+esc(v.c)+'</div>':'')+'</div><button class="btn s d" data-vdel="'+esc(v.id)+'" aria-label="Hapus catatan kunjungan '+esc(v.n)+'">Hapus</button></div>'}).join('')
+  :'<div class="card">Tidak ada kunjungan pada rentang ini.</div>'}
+function qt(v){var s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'}
+function histCsv(){var rows=histRows().slice().reverse();
+ return '\ufeff'+['tanggal','jam','nama_usaha','jenis_usaha','hasil','catatan','petugas','lat','lng'].join(',')+'\n'+rows.map(function(v){var b=byId(v.bid);return [qt(v.d),qt(jam(v)),qt(v.n),qt(v.t),qt(v.r),qt(v.c),qt(v.p),b?b.lat:'',b?b.lng:''].join(',')}).join('\n')}
+
+/* ---------- dashboard ---------- */
+function barHtml(n,t){var p=t?Math.round(n/t*100):0;return '<div class="bar" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100" aria-label="Pencapaian '+p+' persen"><i style="width:'+Math.min(100,p)+'%;background:'+(p>=100?'#1B7F4B':'#0B2F5B')+'"></i></div>'}
+function renderDash(){
+ var pets={};db.visits.forEach(function(v){pets[v.p||'__none']=v.p||'(tanpa nama)'});
+ var opt='<option value="Semua">Semua petugas</option>'+Object.keys(pets).sort().map(function(k){return '<option value="'+esc(k)+'">'+esc(pets[k])+'</option>'}).join('');
+ if($('dp').innerHTML!==opt)$('dp').innerHTML=opt;
+ if(st.dPet!=='Semua'&&!pets[st.dPet])st.dPet='Semua';$('dp').value=st.dPet;
+ var tgt=+db.settings.target||5,now=new Date(),y=now.getFullYear(),mo=now.getMonth(),mk=y+'-'+pad(mo+1),td=today(),hol=+db.settings['hol'+mk]||0;
+ $('dt').value=tgt;$('dh').value=hol;
+ var V=db.visits.filter(function(v){return st.dPet==='Semua'||(v.p||'__none')===st.dPet});
+ var isT=function(v){return v.d===td},isM=function(v){return v.d.slice(0,7)===mk};
+ var dim=new Date(y,mo+1,0).getDate(),wd=0,el=0;
+ for(var d=1;d<=dim;d++){var w=new Date(y,mo,d).getDay();if(w>0&&w<6){wd++;if(d<=now.getDate())el++}}
+ wd=Math.max(0,wd-hol);el=Math.min(el,wd);
+ var mt=wd*tgt,tB=countRes(isT,'Berhasil',V),mB=countRes(isM,'Berhasil',V),pace=el*tgt;
+ var mS=countRes(isM,'Sudah',V),mM=countRes(isM,'Menolak',V),tS=countRes(isT,'Sudah',V),tM=countRes(isT,'Menolak',V);
+ var pt=tgt?Math.round(tB/tgt*100):0,pm=mt?Math.round(mB/mt*100):0;
+ var conv=(mB+mM)?Math.round(mB/(mB+mM)*100)+'%':'-';
+ var gap=mB-pace,paceTxt=gap>=0?'<span style="color:var(--ok);font-weight:700">Di atas target berjalan (+'+gap+')</span>':'<span class="warn" style="font-weight:700">Tertinggal '+(-gap)+' dari target berjalan</span>';
+ // tren 14 hari
+ var days=[],mx=Math.max(tgt,1);
+ for(var i=13;i>=0;i--){var dt=new Date(y,mo,now.getDate()-i),k=ymd(dt),n=countRes(function(v){return v.d===k},'Berhasil',V);days.push({k:k,n:n,dd:dt.getDate()});mx=Math.max(mx,n)}
+ var sv='<svg viewBox="0 0 336 124" width="100%" role="img" aria-label="Grafik berhasil per hari, 14 hari terakhir"><line x1="0" x2="336" y1="'+(96-tgt/mx*80)+'" y2="'+(96-tgt/mx*80)+'" stroke="#B3261E" stroke-dasharray="4 3"/><text x="334" y="'+(92-tgt/mx*80)+'" font-size="9" text-anchor="end" fill="#B3261E">target '+tgt+'</text>';
+ days.forEach(function(x,i){var h=x.n/mx*80,xx=i*24+3;sv+='<rect x="'+xx+'" y="'+(96-h)+'" width="18" height="'+h+'" rx="2" fill="'+(x.n>=tgt?'#1B7F4B':'#0B2F5B')+'"/>'+(x.n?'<text x="'+(xx+9)+'" y="'+(92-h)+'" font-size="10" text-anchor="middle" fill="#14233A">'+x.n+'</text>':'')+'<text x="'+(xx+9)+'" y="112" font-size="9" text-anchor="middle" fill="#506078">'+x.dd+'</text>'});
+ sv+='</svg>';
+ // per jenis
+ var gj={};V.filter(function(v){return isM(v)&&v.r==='Berhasil'}).forEach(function(v){var t=(v.t||'').trim()||'Tanpa jenis',k=t.toLowerCase();gj[k]=gj[k]||{t:t,n:0};gj[k].n++});
+ var gl=Object.keys(gj).map(function(k){return gj[k]}).sort(function(a,b){return b.n-a.n}).slice(0,5);
+ // didekati ulang
+ var re=db.biz.filter(function(b){return stat(b)==='belum'&&LAST[b.id]&&daysSince(LAST[b.id])>=30}).sort(function(a,b){return LAST[a.id]<LAST[b.id]?-1:1});
+ var h='<div class="card"><div class="sm">Hari ini ('+td+')</div><div class="big">'+tB+' <span style="font-size:15px;font-weight:600">/ '+tgt+' berhasil · '+pt+'%</span></div>'+barHtml(tB,tgt)+'<div class="sm">Sudah '+tS+' · Menolak '+tM+'</div></div>'
+ +'<div class="card"><div class="sm">Bulan ini ('+mk+') · '+wd+' hari kerja</div><div class="big">'+mB+' <span style="font-size:15px;font-weight:600">/ '+mt+' berhasil · '+pm+'%</span></div>'+barHtml(mB,mt)+'<div class="sm">Target berjalan s.d. hari ini: '+pace+' · '+paceTxt+'</div><div class="sm">Sudah '+mS+' · Menolak '+mM+' · Konversi penawaran (Berhasil ÷ Berhasil+Menolak): <b>'+conv+'</b></div></div>'
+ +'<h2>Berhasil per hari (14 hari terakhir)</h2>'+sv
+ +'<h2>Berhasil bulan ini per jenis usaha</h2>'+(gl.length?gl.map(function(x){return '<div class="sm" style="padding:3px 0;display:flex;justify-content:space-between"><span>'+esc(x.t)+'</span><b>'+x.n+'</b></div>'}).join(''):'<div class="sm">Belum ada.</div>')
+ +'<h2>Layak didekati ulang (menolak ≥ 30 hari lalu)</h2>'+(re.length?'<button class="btn s" data-redo="1" style="margin-bottom:6px">Pilih semua untuk rute</button>'+re.slice(0,8).map(function(b){return '<div class="hrow"><div class="x"><a href="#" data-hid="'+esc(b.id)+'" style="color:var(--nav);font-weight:700">'+esc(b.n)+'</a><div class="sm">'+(b.t?esc(b.t)+' · ':'')+daysSince(LAST[b.id])+' hari lalu</div></div></div>'}).join(''):'<div class="sm">Belum ada.</div>');
+ $('dbody').innerHTML=h}
+
+/* ---------- aksi ---------- */
+function select(id){st.sel=id;st.editing=false;showTab('detail');render();var b=byId(id);if(hasL&&b)map.panTo([b.lat,b.lng])}
+var TABS=['list','detail','add','hist','dash','data'];
+function showTab(t){document.querySelectorAll('.tabs button').forEach(function(x){x.setAttribute('aria-selected',x.dataset.tab===t)});TABS.forEach(function(k){$('p-'+k).hidden=k!==t});if(t==='add')renderAdd()}
+function visit(r){var b=byId(st.sel);if(!b)return;addVisit(b,r,$('vn').value.trim(),$('vj').value);
+ st.pick=st.pick.filter(function(i){return i!==b.id});save();toast('Tersimpan: '+r+'. Status: '+STAT[ST_after(b)][0]);render()}
+function ST_after(b){buildStat();return stat(b)}
+function saveNew(){var n=$('an').value.trim(),d=st.draft;
+ if(!n){toast('Isi nama usaha');return}if(!d){toast('Pilih lokasi dulu');return}
+ if(!$('ar').value){toast('Pilih hasil kunjungan');return}
+ var dup=db.biz.filter(function(b){return dist(b,d)<20})[0];if(dup&&!st.dupAck){st.dupAck=true;renderAdd();return}
+ var r=$('ar').value,c=$('ac').value.trim(),b={id:'b'+Date.now().toString(36),n:n,t:$('aj').value.trim(),lat:d.lat,lng:d.lng,note:'',created:today(),verified:today(),s0:'belum'};
+ db.biz.push(b);addVisit(b,r,c,b.t);
+ save();st.draft=null;st.dupAck=false;$('an').value='';$('aj').value='';$('ac').value='';$('ar').value='';st.sel=b.id;st.editing=false;toast('Usaha disimpan');showTab('detail');render()}
+function gmaps(){var ro=routeOrder();if(!ro.length){toast('Centang usaha dulu');return}
+ var s=ro.slice(0,10),dst=s[s.length-1],way=s.slice(0,-1).map(function(b){return b.lat+','+b.lng}).join('|'),o=origin();
+ var u='https://www.google.com/maps/dir/?api=1&travelmode=driving&origin='+o.lat+','+o.lng+'&destination='+dst.lat+','+dst.lng+(way?'&waypoints='+encodeURIComponent(way):'');
+ if(ro.length>10)toast('Google Maps membatasi 10 titik. 10 pertama dibuka.');window.open(u,'_blank','noopener')}
+function download(name,text,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function csvBiz(){return '\ufeff'+['id','nama','jenis','status','lat','lng','catatan','dibuat','terakhir_diverifikasi','jumlah_kunjungan'].join(',')+'\n'+db.biz.map(function(b){return [qt(b.id),qt(b.n),qt(b.t),qt(STAT[stat(b)][0]),b.lat,b.lng,qt(b.note),qt(b.created),qt(b.verified),db.visits.filter(function(v){return v.bid===b.id}).length].join(',')}).join('\n')}
+
+/* ---------- event ---------- */
+document.addEventListener('click',function(e){var t=e.target,m;
+ if((m=t.closest('[data-tab]'))){showTab(m.dataset.tab);return}
+ if((m=t.closest('[data-fs]'))){st.on[m.dataset.fs]=st.on[m.dataset.fs]?0:1;render();return}
+ if((m=t.closest('[data-fj]'))){st.jenis=m.dataset.fj;render();return}
+ if((m=t.closest('[data-res]'))){visit(m.dataset.res);return}
+ if((m=t.closest('[data-hid]'))){e.preventDefault();if(byId(m.dataset.hid))select(m.dataset.hid);return}
+ if((m=t.closest('[data-vdel]'))){var v=db.visits.filter(function(x){return x.id===m.dataset.vdel})[0];if(v&&confirm('Hapus catatan kunjungan '+v.n+' ('+v.r+', '+v.d+')?')){db.visits=db.visits.filter(function(x){return x!==v});save();render();toast('Catatan dihapus')}return}
+ if(t.closest('[data-redo]')){db.biz.filter(function(b){return stat(b)==='belum'&&LAST[b.id]&&daysSince(LAST[b.id])>=30}).forEach(function(b){if(st.pick.indexOf(b.id)<0&&st.pick.length<MAXSTOP)st.pick.push(b.id)});st.on.belum=1;showTab('list');render();toast('Dipilih untuk rute');return}
+ if(t.closest('[data-pick]'))return;
+ if((m=t.closest('.nm[data-id]'))){select(m.dataset.id)}});
+document.addEventListener('keydown',function(e){var m=e.target.closest&&e.target.closest('.nm[data-id]');if(m&&(e.key==='Enter'||e.key===' ')){e.preventDefault();select(m.dataset.id)}});
+document.addEventListener('change',function(e){var k=e.target.dataset&&e.target.dataset.pick;
+ if(k){var i=st.pick.indexOf(k);if(e.target.checked&&i<0){if(pickedIds().length>=MAXSTOP){toast('Maksimal '+MAXSTOP+' usaha per rute');e.target.checked=false;return}st.pick.push(k)}if(!e.target.checked&&i>-1)st.pick.splice(i,1);render();return}
+ var id=e.target.id;
+ if(id==='hf'){st.hFrom=e.target.value;renderHist()}
+ if(id==='ht'){st.hTo=e.target.value;renderHist()}
+ if(id==='hr'){st.hRes=e.target.value;renderHist()}
+ if(id==='dp'){st.dPet=e.target.value;renderDash()}
+ if(id==='dt'){db.settings.target=Math.min(100,Math.max(1,+e.target.value||5));save();renderDash();renderKpi()}
+ if(id==='dh'){var mk=new Date().getFullYear()+'-'+pad(new Date().getMonth()+1);db.settings['hol'+mk]=Math.min(31,Math.max(0,+e.target.value||0));save();renderDash()}
+ if(id==='off'){db.settings.officer=e.target.value.trim();save();toast('Nama petugas disimpan')}});
+$('goRoute').onclick=gmaps;
+$('clrRoute').onclick=function(){st.pick=[];render()};
+$('useGps').onclick=function(){toast('Mencari lokasi...');locate(function(u){st.draft={lat:+u.lat.toFixed(6),lng:+u.lng.toFixed(6),acc:u.acc};st.dupAck=false;renderAdd();if(hasL)map.setView([u.lat,u.lng],18);render()})};
+$('usePick').onclick=function(){st.pickMode=true;toast('Ketuk lokasi usaha di peta')};
+$('asave').onclick=saveNew;
+$('mvBr').onclick=function(){st.branchMode=true;toast('Ketuk lokasi cabang di peta')};
+$('cpBr').onclick=function(){var t=BR().lat+', '+BR().lng;try{navigator.clipboard.writeText(t).then(function(){toast('Disalin: '+t)},function(){toast(t)})}catch(x){toast(t)}};
+$('hcsv').onclick=function(){if(!histRows().length){toast('Tidak ada data pada rentang ini');return}download('riwayat-kunjungan-'+(st.hFrom||'awal')+'_sd_'+(st.hTo||'akhir')+'.csv',histCsv(),'text/csv;charset=utf-8')};
+$('p-detail').addEventListener('click',function(e){var b=byId(st.sel);if(!b)return;var t=e.target.closest('button');if(!t)return;var id=t.id;
+ if(id==='editToggle'){st.editing=!st.editing;renderDetail();return}
+ if(id==='enSave'){var n=$('en').value.trim();if(!n){toast('Nama tidak boleh kosong');return}b.n=n;b.verified=today();save();toast('Nama diperbarui');render()}
+ if(id==='elGps'){toast('Mencari lokasi...');locate(function(u){b.lat=+u.lat.toFixed(6);b.lng=+u.lng.toFixed(6);b.verified=today();save();if(hasL)map.setView([b.lat,b.lng],18);render();toast('Titik diperbarui (akurasi ±'+Math.round(u.acc)+' m)')})}
+ if(id==='elMap'){st.editLoc=b.id;toast('Ketuk lokasi baru di peta')}
+ if(id==='ddel'&&confirm('Hapus '+b.n+'? Riwayat kunjungannya tetap tersimpan.')){db.biz=db.biz.filter(function(x){return x!==b});st.sel=null;st.pick=st.pick.filter(function(i){return i!==b.id});save();showTab('list');render()}
+ if(id==='dgo')window.open('https://www.google.com/maps/dir/?api=1&destination='+b.lat+','+b.lng,'_blank','noopener')});
+$('expCsv').onclick=function(){download('usaha-'+today()+'.csv',csvBiz(),'text/csv;charset=utf-8')};
+$('expJson').onclick=function(){download('cadangan-peta-'+today()+'.json',JSON.stringify(db),'application/json')};
+$('impf').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=norm(JSON.parse(r.result)),nb=0,nv=0;
+ d.biz.forEach(function(b){if(b&&b.id&&b.n&&typeof b.lat==='number'&&typeof b.lng==='number'&&!byId(b.id)){b.verified=b.verified||today();db.biz.push(b);nb++}});
+ d.visits.forEach(function(v){if(!db.visits.some(function(x){return x.id===v.id})){db.visits.push(v);nv++}});
+ save();render();toast(nb+' usaha dan '+nv+' kunjungan diimpor')}catch(x){toast('File tidak valid')}};r.readAsText(f);e.target.value=''};
+$('sample').onclick=function(){var c=BR(),T=['Warung makan','Toko kelontong','Apotek','Laundry','Toko kelontong'],N=['Warung Contoh 1','Toko Contoh 2','Apotek Contoh 3','Laundry Contoh 4','Toko Contoh 5'],R=['Berhasil','Menolak','Sudah','Berhasil','Menolak'];
+ N.forEach(function(n,i){var b={id:'s'+Date.now().toString(36)+i,n:n,t:T[i],lat:c.lat+(Math.random()-.5)*.004,lng:c.lng+(Math.random()-.5)*.004,note:'',created:today(),verified:today(),s0:'belum'};db.biz.push(b);if(R[i])addVisit(b,R[i],'Data contoh',T[i])});
+ var nw=new Date();for(var k=1;k<=6;k++){var dd=new Date(nw.getFullYear(),nw.getMonth(),nw.getDate()-k,10,0),b2=db.biz[db.biz.length-1-(k%5)];if(dd.getDay()>0&&dd.getDay()<6&&b2)db.visits.push({id:'d'+Date.now().toString(36)+k,bid:b2.id,n:b2.n,t:b2.t,d:ymd(dd),ts:dd.toISOString(),r:k%3===0?'Menolak':'Berhasil',c:'Data contoh',p:officer()})}
+ save();render();showTab('list');toast('Data contoh dimuat. Hapus lewat "Hapus semua data" sebelum dipakai sungguhan.')};
+$('wipe').onclick=function(){if(confirm('Hapus SEMUA data (usaha dan riwayat kunjungan) di perangkat ini? Pastikan sudah ekspor cadangan.')){db.biz=[];db.visits=[];st.sel=null;st.pick=[];save();render()}};
+$('hf').value=st.hFrom;$('ht').value=st.hTo;$('off').value=db.settings.officer||'';
+renderAdd();render();
+</script></body></html>
